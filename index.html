@@ -1,1 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOTAM Analyzer</title>
+<style>
+body { margin:0; padding:0; background:#030810; color:#c8d8e8; font-family:monospace; }
+header { background:#060d1a; border-bottom:1px solid #0d1a2a; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+.logo-title { font-size:16px; font-weight:700; letter-spacing:3px; color:#e8f4ff; }
+.logo-sub { font-size:9px; color:#2a4a6a; letter-spacing:2px; margin-top:2px; }
+main { max-width:800px; margin:0 auto; padding:16px; }
+.disclaimer { background:#0a1a0a; border:1px solid #1a3a1a; border-left:3px solid #3a9a3a; border-radius:8px; padding:12px 16px; margin-bottom:16px; }
+.disclaimer-title { color:#5cba5c; font-size:11px; font-weight:700; letter-spacing:1px; margin-bottom:4px; }
+.disclaimer-body { color:#3a6a3a; font-size:11px; line-height:1.6; }
+.panel { background:#080f1a; border:1px solid #111a28; border-radius:8px; padding:20px; margin-bottom:16px; }
+label { color:#4a6fa5; font-size:10px; letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:6px; }
+input, textarea { width:100%; background:#020810; border:1px solid #1e3a5f; border-radius:4px; padding:10px 12px; color:#c8d8e8; font-size:13px; font-family:monospace; outline:none; box-sizing:border-box; }
+input:focus, textarea:focus { border-color:#00d4ff; }
+textarea { min-height:180px; resize:vertical; line-height:1.6; margin-top:0; }
+.hint { color:#2a4a6a; font-size:10px; margin-top:6px; }
+.hint a { color:#4a6fa5; }
+.btn { background:#0a2040; border:1px solid #00d4ff66; color:#00d4ff; border-radius:4px; padding:12px 28px; cursor:pointer; font-size:12px; letter-spacing:2px; font-weight:700; font-family:monospace; margin-top:14px; display:inline-block; }
+.btn:active { background:#0d2a50; }
+.mode-row { display:flex; gap:6px; margin-bottom:14px; }
+.mode-btn { background:transparent; border:1px solid #0d1a2a; color:#2a4a6a; border-radius:4px; padding:7px 16px; cursor:pointer; font-size:11px; font-family:monospace; }
+.mode-btn.active { background:#0d1a2e; border-color:#1e3a5f; color:#7ec8e3; }
+.loading { text-align:center; padding:50px 20px; display:none; }
+.loading p { color:#00d4ff; font-size:13px; letter-spacing:3px; }
+.loading small { color:#2a4a6a; font-size:11px; display:block; margin-top:8px; }
+.error { background:#1a0505; border:1px solid #ff3b3b; border-radius:8px; padding:16px; margin-bottom:16px; display:none; }
+.error p { color:#ff6b6b; font-size:12px; margin:0 0 10px; }
+.error button { background:transparent; border:1px solid #ff3b3b; color:#ff6b6b; border-radius:4px; padding:5px 14px; cursor:pointer; font-size:11px; font-family:monospace; }
+.stats { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+.stat { border-radius:6px; padding:8px 14px; display:flex; gap:8px; align-items:center; }
+.stat.c { background:#1a0505; border:1px solid #ff3b3b44; }
+.stat.i { background:#1a0d00; border:1px solid #ff950044; }
+.stat.t { background:#080f1a; border:1px solid #111a28; }
+.stat-n { font-size:20px; font-weight:700; }
+.stat-n.c { color:#ff3b3b; } .stat-n.i { color:#ff9500; } .stat-n.t { color:#4a6fa5; }
+.stat-l { font-size:10px; letter-spacing:1px; }
+.stat-l.c { color:#7a2020; } .stat-l.i { color:#7a4a00; } .stat-l.t { color:#2a4a6a; }
+.new-btn { margin-left:auto; background:transparent; border:1px solid #1e3a5f; color:#4a6fa5; border-radius:4px; padding:7px 14px; cursor:pointer; font-size:11px; font-family:monospace; }
+.tabs { display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid #0d1a2a; padding-bottom:8px; flex-wrap:wrap; }
+.tab { background:transparent; border:1px solid transparent; color:#2a4a6a; border-radius:4px; padding:5px 12px; cursor:pointer; font-size:10px; letter-spacing:1px; font-family:monospace; }
+.tab.active { background:#0d1a2e; border-color:#1e3a5f; color:#7ec8e3; }
+.footer-note { background:#080f1a; border:1px solid #111a28; border-radius:6px; padding:8px 14px; margin-bottom:12px; color:#2a4a3a; font-size:10px; }
+.card { border-radius:8px; margin-bottom:8px; overflow:hidden; }
+.card.critical { background:#080f1a; border:1px solid #111a28; border-left:3px solid #ff3b3b; }
+.card.important { background:#080f1a; border:1px solid #111a28; border-left:3px solid #ff9500; }
+.card.routine { background:#080f1a; border:1px solid #111a28; border-left:3px solid #3a9a3a; }
+.card-head { padding:12px 16px; cursor:pointer; display:flex; gap:10px; align-items:flex-start; }
+.card-meta { flex:1; }
+.card-tags { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px; }
+.badge { border-radius:4px; padding:2px 8px; font-size:10px; font-weight:700; letter-spacing:1px; }
+.badge.critical { background:#3d0a0a; border:1px solid #ff3b3b; color:#ff6b6b; }
+.badge.important { background:#2d1f00; border:1px solid #ff9500; color:#ffb347; }
+.badge.routine { background:#0a1f0a; border:1px solid #3a9a3a; color:#5cba5c; }
+.tag { background:#0d1f33; border:1px solid #1e3a5f; color:#4a6fa5; border-radius:4px; padding:2px 8px; font-size:10px; }
+.card-id { margin-left:auto; color:#2a4a6a; font-size:11px; flex-shrink:0; }
+.card-summary { color:#c8d8e8; font-size:13px; line-height:1.5; }
+.card-toggle { color:#2a4a6a; font-size:12px; flex-shrink:0; margin-top:2px; }
+.card-body { border-top:1px solid #111a28; padding:12px 16px; display:none; }
+.card-body.open { display:block; }
+.raw-label { color:#4a6fa5; font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+pre { background:#020810; border:1px solid #0d1a2a; border-radius:4px; padding:10px 12px; color:#5a8fa5; font-size:11px; white-space:pre-wrap; word-break:break-word; margin:0; line-height:1.6; overflow-x:auto; }
+.times { display:flex; gap:14px; margin-top:10px; flex-wrap:wrap; }
+.time-item { color:#4a6fa5; font-size:11px; }
+.time-item span { color:#7ec8e3; }
+.empty { color:#2a4a6a; text-align:center; padding:30px; font-size:12px; }
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
 
+<header>
+  <div>
+    <div class="logo-title">✈ NOTAM ANALYZER</div>
+    <div class="logo-sub">AI-POWERED · BRIEFING TOOL ONLY</div>
+  </div>
+</header>
+
+<main>
+
+<div class="disclaimer">
+  <div class="disclaimer-title">BRIEFING TOOL — NOT AN OPERATIONAL DECISION AID</div>
+  <div class="disclaimer-body">This tool structures and summarizes NOTAMs only. No operational decisions. Original text always preserved. Pilot is responsible for all flight decisions. Verify against official sources.</div>
+</div>
+
+<div class="panel" id="apiPanel">
+  <label>Anthropic API Key</label>
+  <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="localStorage.setItem('nk',this.value)">
+  <div class="hint">Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> · Saved locally in your browser</div>
+</div>
+
+<div class="panel" id="inputPanel">
+  <div style="margin-bottom:16px">
+    <label>Last Briefing — NOTAMs after this are marked NEW</label>
+    <input type="datetime-local" id="lastBriefing" style="color-scheme:dark">
+  </div>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="tabText" onclick="setMode('text')">📋 Paste Text</button>
+    <button class="mode-btn" id="tabPdf" onclick="setMode('pdf')">📄 PDF Upload</button>
+  </div>
+
+  <div id="textMode">
+    <label>Paste Raw NOTAMs</label>
+    <textarea id="notamText" placeholder="Paste NOTAM text here..."></textarea>
+  </div>
+
+  <div id="pdfMode" class="hidden">
+    <label>Upload Dispatch PDF</label>
+    <input type="file" id="pdfInput" accept="application/pdf" onchange="loadPdf(this)" style="padding:8px">
+  </div>
+
+  <button class="btn" onclick="analyze()">ANALYZE NOTAMs →</button>
+</div>
+
+<div class="loading" id="loading">
+  <p id="loadingMsg">◈ ANALYZING...</p>
+  <small>AI is reading and prioritizing your NOTAMs</small>
+</div>
+
+<div class="error" id="errorBox">
+  <p id="errorMsg"></p>
+  <button onclick="resetApp()">Try Again</button>
+</div>
+
+<div id="results" class="hidden">
+  <div class="stats" id="statsBar"></div>
+  <div class="tabs" id="filterTabs"></div>
+  <div class="footer-note">ℹ Structured summaries only · Original text preserved · Pilot responsible for all decisions</div>
+  <div id="notamList"></div>
+</div>
+
+</main>
+
+<script>
+const SYSTEM_PROMPT = `You are an aviation briefing assistant. Extract and analyze all NOTAMs from the provided content.
+
+RULES: No operational decisions. Preserve original text exactly. No safety judgments. Summaries are factual/descriptive only.
+
+Respond with ONLY a JSON object, starting with { and ending with }. No other text.
+
+{"notams":[{"id":"string","raw":"string","priority":"CRITICAL or IMPORTANT or ROUTINE","category":"RUNWAY or ILS_NAV or AIRSPACE or LIGHTING or TAXIWAY or COMMS or PROCEDURE or OBSTACLE or OTHER","summary":"1-2 sentence factual description of what is stated","airport":"ICAO or null","validFrom":"ISO or null","validTo":"ISO or null","created":"ISO or null"}]}
+
+Priority: CRITICAL=runway closed/ILS unserviceable/approach NA. IMPORTANT=partial runway/degraded navaid/lighting U/S/taxiway closed. ROUTINE=procedure amendments/obstacles with markings/admin/FICON.
+Return pure JSON only.`;
+
+let allNotams = [];
+let activeTab = 'all';
+let lastBriefing = null;
+let pdfB64 = null;
+let mode = 'text';
+let expanded = new Set();
+
+window.onload = () => {
+  const k = localStorage.getItem('nk');
+  if (k) document.getElementById('apiKey').value = k;
+};
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('textMode').classList.toggle('hidden', m !== 'text');
+  document.getElementById('pdfMode').classList.toggle('hidden', m !== 'pdf');
+  document.getElementById('tabText').classList.toggle('active', m === 'text');
+  document.getElementById('tabPdf').classList.toggle('active', m === 'pdf');
+}
+
+function loadPdf(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { pdfB64 = r.result.split(',')[1]; };
+  r.readAsDataURL(f);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function extractJSON(text) {
+  try { return JSON.parse(text.trim()); } catch {}
+  const s = text.indexOf('{'), e = text.lastIndexOf('}');
+  if (s !== -1 && e > s) { try { return JSON.parse(text.slice(s, e+1)); } catch {} }
+  return null;
+}
+
+async function analyze() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { showError('Please enter your Anthropic API key.'); return; }
+  const hasInput = mode === 'pdf' ? !!pdfB64 : !!document.getElementById('notamText').value.trim();
+  if (!hasInput) { showError('Please paste NOTAM text or upload a PDF.'); return; }
+
+  lastBriefing = document.getElementById('lastBriefing').value || null;
+  document.getElementById('inputPanel').classList.add('hidden');
+  document.getElementById('apiPanel').classList.add('hidden');
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('loading').style.display = 'block';
+
+  try {
+    let content;
+    if (mode === 'pdf' && pdfB64) {
+      content = [
+        { type:'document', source:{ type:'base64', media_type:'application/pdf', data:pdfB64 } },
+        { type:'text', text:`Last briefing: ${lastBriefing||'not provided'}. Extract and analyze all NOTAMs. Return JSON only.` }
+      ];
+    } else {
+      content = `Last briefing: ${lastBriefing||'not provided'}\n\nNOTAMs:\n${document.getElementById('notamText').value}`;
+    }
+
+    document.getElementById('loadingMsg').textContent = '◈ ANALYZING...';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:8000,
+        system: SYSTEM_PROMPT,
+        messages:[{ role:'user', content }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = (data.content||[]).map(b=>b.text||'').join('');
+    const parsed = extractJSON(text);
+    if (!parsed || !Array.isArray(parsed.notams)) throw new Error('Could not parse response. Please try again.');
+
+    allNotams = parsed.notams;
+    document.getElementById('loading').style.display = 'none';
+    showResults();
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    showError(e.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('errorMsg').textContent = '⚠ ' + msg;
+  document.getElementById('errorBox').style.display = 'block';
+  document.getElementById('inputPanel').classList.remove('hidden');
+  document.getElementById('apiPanel').classList.remove('hidden');
+}
+
+function resetApp() {
+  allNotams = []; expanded.clear();
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('inputPanel').classList.remove('hidden');
+  document.getElementById('apiPanel').classList.remove('hidden');
+}
+
+function isNew(n) {
+  if (!lastBriefing || !n.created) return false;
+  try { return new Date(n.created) > new Date(lastBriefing); } catch { return false; }
+}
+
+function pOrder(p) { return {CRITICAL:0,IMPORTANT:1,ROUTINE:2}[p]??2; }
+
+function getFiltered() {
+  return allNotams
+    .filter(n => {
+      if (activeTab==='critical') return n.priority==='CRITICAL';
+      if (activeTab==='important') return n.priority==='IMPORTANT';
+      if (activeTab==='new') return isNew(n);
+      return true;
+    })
+    .sort((a,b) => (pOrder(a.priority)-(isNew(a)?0.5:0)) - (pOrder(b.priority)-(isNew(b)?0.5:0)));
+}
+
+function showResults() {
+  activeTab = 'all';
+  renderStats(); renderTabs(); renderList();
+  document.getElementById('results').classList.remove('hidden');
+}
+
+function renderStats() {
+  const c = allNotams.filter(n=>n.priority==='CRITICAL').length;
+  const i = allNotams.filter(n=>n.priority==='IMPORTANT').length;
+  let h = '';
+  if (c) h += `<div class="stat c"><span class="stat-n c">${c}</span><span class="stat-l c">CRITICAL</span></div>`;
+  if (i) h += `<div class="stat i"><span class="stat-n i">${i}</span><span class="stat-l i">IMPORTANT</span></div>`;
+  h += `<div class="stat t"><span class="stat-n t">${allNotams.length}</span><span class="stat-l t">TOTAL</span></div>`;
+  h += `<button class="new-btn" onclick="resetApp()">NEW BRIEFING</button>`;
+  document.getElementById('statsBar').innerHTML = h;
+}
+
+function renderTabs() {
+  const c = allNotams.filter(n=>n.priority==='CRITICAL').length;
+  const i = allNotams.filter(n=>n.priority==='IMPORTANT').length;
+  const nw = allNotams.filter(isNew).length;
+  const tabs = [
+    {k:'all', l:`ALL (${allNotams.length})`},
+    {k:'critical', l:`CRITICAL (${c})`},
+    {k:'important', l:`IMPORTANT (${i})`},
+    {k:'new', l:`NEW (${nw})`},
+  ];
+  document.getElementById('filterTabs').innerHTML = tabs.map(t =>
+    `<button class="tab ${activeTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}</button>`
+  ).join('');
+}
+
+function setTab(t) { activeTab=t; renderTabs(); renderList(); }
+
+function renderList() {
+  const list = getFiltered();
+  const el = document.getElementById('notamList');
+  if (!list.length) { el.innerHTML = '<div class="empty">No NOTAMs in this category.</div>'; return; }
+  el.innerHTML = list.map((n,idx) => {
+    const k = (n.id||'n'+idx).replace(/[^a-zA-Z0-9]/g,'_');
+    const p = (n.priority||'ROUTINE').toLowerCase();
+    const open = expanded.has(k);
+    const badge = `<span class="badge ${p}">${n.priority||'ROUTINE'}</span>`;
+    const cat = n.category ? `<span class="tag">${n.category.replace('_','/')}</span>` : '';
+    const newTag = isNew(n) ? `<span class="tag" style="border-color:#0055cc;color:#4d9fff;background:#001a4d">🆕 NEW</span>` : '';
+    const ap = n.airport ? `<span class="tag">${n.airport}</span>` : '';
+    const id = n.id ? `<span class="card-id">${n.id}</span>` : '';
+    const times = open ? `<div class="times">${n.validFrom?`<div class="time-item">FROM: <span>${esc(n.validFrom)}</span></div>`:''}${n.validTo?`<div class="time-item">TO: <span>${esc(n.validTo)}</span></div>`:''}${n.created?`<div class="time-item">CREATED: <span>${esc(n.created)}</span></div>`:''}</div>` : '';
+    return `<div class="card ${p}">
+      <div class="card-head" onclick="toggle('${k}')">
+        <div class="card-meta">
+          <div class="card-tags">${badge}${cat}${newTag}${ap}${id}</div>
+          <div class="card-summary">${esc(n.summary)}</div>
+        </div>
+        <div class="card-toggle">${open?'▲':'▼'}</div>
+      </div>
+      <div class="card-body ${open?'open':''}">
+        <div class="raw-label">Raw NOTAM</div>
+        <pre>${esc(n.raw)}</pre>
+        ${times}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(k) {
+  if (expanded.has(k)) expanded.delete(k); else expanded.add(k);
+  renderList();
+}
+</script>
+</body>
+</html>
